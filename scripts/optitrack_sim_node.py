@@ -26,6 +26,9 @@ class MinimalPublisher(Node):
             data,addr = sock.recvfrom(1024)
             decoded_data = data.decode('utf-8')
             received_object = yaml.safe_load(decoded_data)
+
+            if not received_object['rigid_bodies']:
+                continue 
             
             rigid_bodies = [float(i) for i in received_object['QDrone']]
             twist_msg = Twist()
