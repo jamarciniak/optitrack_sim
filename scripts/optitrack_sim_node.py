@@ -2,8 +2,9 @@
 
 import rclpy
 from rclpy.node import Node
-from geometry_msgs.msg import Twist
-from optitrack_sim.msg import OptiData         
+from geometry_msgs.msg import Twist, Pose
+from optitrack_sim.msg import OptiData 
+from tf_transformations import quaternion_from_euler
 import time
 import yaml
 import socket
@@ -15,7 +16,7 @@ class MinimalPublisher(Node):
 
     def __init__(self):
         super().__init__('optitrack_simulator')
-        self.twist_publisher_ = self.create_publisher(Twist, '/optitrack/cmd_vel', 10)  
+        self.twist_publisher_ = self.create_publisher(Pose, '/optitrack/pose', 10)  
         self.receive_from_server()
         
     def receive_from_server(self):
@@ -25,21 +26,26 @@ class MinimalPublisher(Node):
         while True:
             data,addr = sock.recvfrom(1024)
             decoded_data = data.decode('utf-8')
+            print(decoded_data)
             received_object = yaml.safe_load(decoded_data)
 
             if not received_object['rigid_bodies']:
                 continue 
             
             rigid_bodies = [float(i) for i in received_object['QDrone']]
-            twist_msg = Twist()
-            twist_msg.linear.x = rigid_bodies[0]
-            twist_msg.linear.y = rigid_bodies[1]
-            twist_msg.linear.z = rigid_bodies[2]
+            quaternion = quaternion_from_euler(rigid_bodies[3],rigid_bodies[4],rigid_bodies[5])
             
-            twist_msg.angular.x = rigid_bodies[3]
-            twist_msg.angular.y = rigid_bodies[4]
-            twist_msg.angular.z = rigid_bodies[5]
-            self.twist_publisher_.publish(twist_msg)
+            pose_msg = Pose()
+            # Position
+            pose_msg.position.x = rigid_bodies[0]
+            pose_msg.position.y = rigid_bodies[1]
+            pose_msg.position.z = rigid_bodies[2]
+            # Orientation
+            pose_msg.orientation.x = quaternion[0]
+            pose_msg.orientation.y = quaternion[1]
+            pose_msg.orientation.z = quaternion[2]
+            pose_msg.orientation.w = quaternion[3]
+            self.twist_publisher_.publish(pose_msg)
 
 
 def main(args=None):
