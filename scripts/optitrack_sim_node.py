@@ -2,47 +2,50 @@
 
 import rclpy
 from rclpy.node import Node
-
-from optitrack_sim.msg import OptiData         
+from geometry_msgs.msg import Twist, Pose
+from optitrack_sim.msg import OptiData 
+from tf_transformations import quaternion_from_euler
 import time
 import yaml
+import socket
 
-
+UDP_IP = "127.0.0.1"
+UDP_PORT = 5005
 
 class MinimalPublisher(Node):
 
     def __init__(self):
         super().__init__('optitrack_simulator')
-        self.publisher_ = self.create_publisher(OptiData, '/optitrack/data', 10)  
-        timer_period = 0.5
-        self.load_json_data()
+        self.twist_publisher_ = self.create_publisher(Pose, '/optitrack/pose', 10)  
+        self.receive_from_server()
+        
+    def receive_from_server(self):
+        sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+        sock.bind((UDP_IP,UDP_PORT))
 
-    def timer_callback(self):
-        
-        msg = OptiData()                                                
-        msg.rigid_bodies = self.i                                           
-        msg.q_drone = [float(self.i)] * 5                                   
-        self.publisher_.publish(msg)
-        self.get_logger().info(f'Publishing rigid_bodies: {msg.rigid_bodies} ')       
-        self.get_logger().info(f'Publishing q_drone: {msg.q_drone}')       
-        self.i += 1
-        
-    def load_json_data(self):
-        file_path = '/root/tello_ros_ws/logger_QDrone.txt'
+        while True:
+            data,addr = sock.recvfrom(1024)
+            decoded_data = data.decode('utf-8')
+            print(decoded_data)
+            received_object = yaml.safe_load(decoded_data)
 
-        with open(file_path,'r') as file:
-            for line in file:
-                data = yaml.safe_load(line)
-                rigid_bodies = data['rigid_bodies']
-                q_drone = [float(i) for i in data['QDrone']]
-                
-                msg = OptiData()                                                
-                msg.rigid_bodies = rigid_bodies                         
-                msg.q_drone = q_drone
-                self.publisher_.publish(msg)
-                time.sleep(0.5)
-                
-        
+            if not received_object['rigid_bodies']:
+                continue 
+            
+            rigid_bodies = [float(i) for i in received_object['QDrone']]
+            quaternion = quaternion_from_euler(rigid_bodies[3],rigid_bodies[4],rigid_bodies[5])
+            
+            pose_msg = Pose()
+            # Position
+            pose_msg.position.x = rigid_bodies[0]
+            pose_msg.position.y = rigid_bodies[1]
+            pose_msg.position.z = rigid_bodies[2]
+            # Orientation
+            pose_msg.orientation.x = quaternion[0]
+            pose_msg.orientation.y = quaternion[1]
+            pose_msg.orientation.z = quaternion[2]
+            pose_msg.orientation.w = quaternion[3]
+            self.twist_publisher_.publish(pose_msg)
 
 
 def main(args=None):
