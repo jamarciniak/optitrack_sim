@@ -26,20 +26,32 @@ class MinimalPublisher(Node):
         while True:
             data,addr = sock.recvfrom(1024)
             decoded_data = data.decode('utf-8')
-            print(decoded_data)
-            received_object = yaml.safe_load(decoded_data)
-
+            
+            try:
+                received_object = yaml.safe_load(decoded_data)
+            except:
+                continue
+                
+            if not isinstance(received_object,dict) or 'rigid_bodies' not in received_object:
+                continue
+            
             if not received_object['rigid_bodies']:
                 continue 
             
+            
             rigid_bodies = [float(i) for i in received_object['QDrone']]
+            
+            if not rigid_bodies[0]:
+                print("Drone not in cage!")
+                continue
+            
             quaternion = quaternion_from_euler(rigid_bodies[3],rigid_bodies[4],rigid_bodies[5])
             
             pose_msg = Pose()
             # Position
-            pose_msg.position.x = rigid_bodies[0]
-            pose_msg.position.y = rigid_bodies[1]
-            pose_msg.position.z = rigid_bodies[2]
+            pose_msg.position.x = rigid_bodies[1]
+            pose_msg.position.y = rigid_bodies[2]
+            pose_msg.position.z = rigid_bodies[3]
             # Orientation
             pose_msg.orientation.x = quaternion[0]
             pose_msg.orientation.y = quaternion[1]
