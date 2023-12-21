@@ -2,7 +2,7 @@
 
 import rclpy
 from rclpy.node import Node
-from geometry_msgs.msg import Twist, Pose
+from geometry_msgs.msg import Twist
 from optitrack_sim.msg import OptiData 
 from tf_transformations import quaternion_from_euler
 import time
@@ -16,7 +16,7 @@ class MinimalPublisher(Node):
 
     def __init__(self):
         super().__init__('optitrack_simulator')
-        self.twist_publisher_ = self.create_publisher(Pose, '/optitrack/pose', 10)  
+        self.twist_publisher_ = self.create_publisher(Twist, '/optitrack/pose', 10)  
         self.receive_from_server()
         
     def receive_from_server(self):
@@ -45,19 +45,16 @@ class MinimalPublisher(Node):
                 print("Drone not in cage!")
                 continue
             
-            quaternion = quaternion_from_euler(rigid_bodies[3],rigid_bodies[4],rigid_bodies[5])
-            
-            pose_msg = Pose()
+            message = Twist()
             # Position
-            pose_msg.position.x = rigid_bodies[1]
-            pose_msg.position.y = rigid_bodies[2]
-            pose_msg.position.z = rigid_bodies[3]
+            message.linear.x = rigid_bodies[1]
+            message.linear.y = rigid_bodies[2]
+            message.linear.z = rigid_bodies[3]
             # Orientation
-            pose_msg.orientation.x = quaternion[0]
-            pose_msg.orientation.y = quaternion[1]
-            pose_msg.orientation.z = quaternion[2]
-            pose_msg.orientation.w = quaternion[3]
-            self.twist_publisher_.publish(pose_msg)
+            message.angular.x = rigid_bodies[3]
+            message.angular.y = rigid_bodies[4]
+            message.angular.z = rigid_bodies[5]
+            self.twist_publisher_.publish(message)
 
 
 def main(args=None):
