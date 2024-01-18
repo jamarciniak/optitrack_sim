@@ -51,9 +51,9 @@ class MinimalPublisher(Node):
             message.linear.y = rigid_bodies[2]
             message.linear.z = rigid_bodies[3]
             # Orientation
-            message.angular.x = rigid_bodies[3]
-            message.angular.y = rigid_bodies[4]
-            message.angular.z = rigid_bodies[5]
+            message.angular.x = rigid_bodies[4]
+            message.angular.y = rigid_bodies[5]
+            message.angular.z = rigid_bodies[6]
             self.twist_publisher_.publish(message)
 
 
